@@ -35,16 +35,7 @@ function install_pm2() {
     fi
 }
 
-# 更新和安装必要的软件
-sudo apt update && sudo apt upgrade -y
-sudo apt install -y curl iptables build-essential git wget jq make gcc nano tmux htop nvme-cli pkg-config libssl-dev libleveldb-dev tar clang bsdmainutils ncdu unzip libleveldb-dev lz4 snapd
 
-# 安装 Go
-sudo rm -rf /usr/local/go
-curl -L https://go.dev/dl/go1.22.0.linux-amd64.tar.gz | sudo tar -xzf - -C /usr/local
-echo 'export PATH=$PATH:/usr/local/go/bin' | sudo tee -a /etc/profile
-source /etc/profile
-go version
 
 # 安装 Side 节点
 function install_node() {
@@ -55,6 +46,18 @@ function install_node() {
     echo "export MONIKER=${NODE_NAME}" >> $HOME/.bash_profile
     echo "export SIDE_PORT=${SIDE_PORT}" >> $HOME/.bash_profile
     source $HOME/.bash_profile
+
+# 更新和安装必要的软件
+    sudo apt update && sudo apt upgrade -y
+    sudo apt install -y curl iptables build-essential git wget jq make gcc nano tmux htop nvme-cli pkg-config libssl-dev libleveldb-dev tar clang bsdmainutils ncdu unzip libleveldb-dev lz4 snapd
+
+ # 安装 Go
+        sudo rm -rf /usr/local/go
+        curl -L https://go.dev/dl/go1.22.0.linux-amd64.tar.gz | sudo tar -xzf - -C /usr/local
+        echo 'export PATH=$PATH:/usr/local/go/bin:$HOME/go/bin' >> $HOME/.bash_profile
+        source $HOME/.bash_profile
+        go version
+
 
     # 下载并安装 Side binary
     cd $HOME
