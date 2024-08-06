@@ -1,19 +1,52 @@
 #!/bin/bash
 
-# 检查并安装所需的软件
-function install_dependencies() {
-    sudo apt-get update
-    sudo apt-get install -y curl git jq wget htop tmux build-essential lz4 gcc unzip
+# 检查是否以root用户运行脚本
+if [ "$(id -u)" != "0" ]; then
+    echo "此脚本需要以root用户权限运行。"
+    echo "请尝试使用 'sudo -i' 命令切换到root用户，然后再次运行此脚本。"
+    exit 1
+fi
+
+# 检查并安装 Node.js 和 npm
+function install_nodejs_and_npm() {
+    if command -v node > /dev/null 2>&1; then
+        echo "Node.js 已安装"
+    else
+        echo "Node.js 未安装，正在安装..."
+        curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
+        sudo apt-get install -y nodejs
+    fi
+
+    if command -v npm > /dev/null 2>&1; then
+        echo "npm 已安装"
+    else
+        echo "npm 未安装，正在安装..."
+        sudo apt-get install -y npm
+    fi
 }
 
-# 安装Node.js和PM2
-function install_nodejs_pm2() {
-    curl -sL https://deb.nodesource.com/setup_14.x | sudo -E bash -
-    sudo apt-get install -y nodejs
-    sudo npm install -g pm2
+# 检查并安装 PM2
+function install_pm2() {
+    if command -v pm2 > /dev/null 2>&1; then
+        echo "PM2 已安装"
+    else
+        echo "PM2 未安装，正在安装..."
+        npm install pm2@latest -g
+    fi
 }
 
-# 安装Side节点
+# 更新和安装必要的软件
+sudo apt update && sudo apt upgrade -y
+sudo apt install -y curl iptables build-essential git wget jq make gcc nano tmux htop nvme-cli pkg-config libssl-dev libleveldb-dev tar clang bsdmainutils ncdu unzip libleveldb-dev lz4 snapd
+
+# 安装 Go
+sudo rm -rf /usr/local/go
+curl -L https://go.dev/dl/go1.22.0.linux-amd64.tar.gz | sudo tar -xzf - -C /usr/local
+echo 'export PATH=$PATH:/usr/local/go/bin' | sudo tee -a /etc/profile
+source /etc/profile
+go version
+
+# 安装 Side 节点
 function install_node() {
     read -p "请输入节点名称: " NODE_NAME
     read -p "请输入节点的端口号: " SIDE_PORT
@@ -32,7 +65,7 @@ function install_node() {
     make install
 
     # 配置并初始化应用
-    sided config node tcp://localhost:${SIDE_PORT}657
+    sided config node tcp://localhost:${SIDE_PORT}
     sided config keyring-backend os
     sided config chain-id grimoria-testnet-1
     sided init "$MONIKER" --chain-id grimoria-testnet-1
@@ -144,6 +177,7 @@ function uninstall_node() {
     sudo systemctl stop sided
     sudo systemctl disable sided
     sudo rm /etc/systemd/system/sided.service
+    sudo systemctl daemon-reload
 }
 
 # 创建验证者
