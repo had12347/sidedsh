@@ -40,11 +40,11 @@ function install_pm2() {
 # 安装 Side 节点
 function install_node() {
     read -p "请输入节点名称: " NODE_NAME
-    read -p "请输入节点的端口号: " SIDE_PORT
+    
 
     # 设置环境变量
     echo "export MONIKER=${NODE_NAME}" >> $HOME/.bash_profile
-    echo "export SIDE_PORT=${SIDE_PORT}" >> $HOME/.bash_profile
+    
     source $HOME/.bash_profile
 
 # 更新和安装必要的软件
@@ -68,10 +68,10 @@ function install_node() {
     make install
 
     # 配置并初始化应用
-    sided config node tcp://localhost:${SIDE_PORT}
+    sided config node tcp://localhost:${SIDE_PORT}567
     sided config keyring-backend os
     sided config chain-id grimoria-testnet-1
-    sided init "$MONIKER" --chain-id grimoria-testnet-1
+    sided init $NODE_MONIKE --chain-id grimoria-testnet-1
 
     # 下载 genesis 和 addrbook
     wget -O $HOME/.side/config/genesis.json https://server-5.itrocket.net/testnet/side/genesis.json
@@ -79,9 +79,10 @@ function install_node() {
 
     # 设置 seeds 和 peers
     SEEDS="9c14080752bdfa33f4624f83cd155e2d3976e303@side-testnet-seed.itrocket.net:45656"
-    PEERS="bbbf623474e377664673bde3256fc35a36ba0df1@side-testnet-peer.itrocket.net:45656,8e7a1deab860a24d4649d124beb37ac8f8257264@[2a01:4f8:262:121c::2]:13556,d5519e378247dfb61dfe90652d1fe3e2b3005a5b@65.109.68.190:17456,7cfbb4742a91fc616bf8d64d05234892a7675ded@91.227.33.18:45656,637077d431f618181597706810a65c826524fd74@5.9.151.56:26356,027ef6300590b1ca3a2b92a274247e24537bd9c9@65.109.65.248:49656,fc350bf644f03278df11b8735727cc2ead4134c9@65.109.93.152:26786,e6575e39599afba59bbe3422284b22edfb1adafb@23.88.5.169:24656,0877bfe53645c830b21ab4098335b2061dac1efa@69.67.150.107:21396,fffd63269133a403cb7d15d8c3b2905b63c73b2a@185.225.191.149:26656"
-    sed -i.bak -E "s|^seeds =.*$|seeds = \"$SEEDS\"|" $HOME/.side/config/config.toml
-    sed -i.bak -E "s|^persistent_peers =.*$|persistent_peers = \"$PEERS\"|" $HOME/.side/config/config.toml
+    PEERS="bbbf623474e377664673bde3256fc35a36ba0df1@side-testnet-peer.itrocket.net:45656,8e7a1deab860a24d4649d124beb37ac8f8257264@[2a01:4f8:262:121c::2]:13556,7cfbb4742a91fc616bf8d64d05234892a7675ded@91.227.33.18:45656,637077d431f618181597706810a65c826524fd74@5.9.151.56:26356,027ef6300590b1ca3a2b92a274247e24537bd9c9@65.109.65.248:49656,d5519e378247dfb61dfe90652d1fe3e2b3005a5b@65.109.68.190:17456,e6575e39599afba59bbe3422284b22edfb1adafb@23.88.5.169:24656,0877bfe53645c830b21ab4098335b2061dac1efa@69.67.150.107:21396,fffd63269133a403cb7d15d8c3b2905b772647bb@95.217.116.103:26656,d5e7f1a7d45b2ad19714d640038cfe8f9f870acc@65.109.80.26:26656,fc350bf644f03278df11b8735727cc2ead4134c9@65.109.93.152:26786,85a16af0aa674b9d1c17c3f2f3a83f28f468174d@167.235.242.236:26656"
+    sed -i -e "/^\[p2p\]/,/^\[/{s/^[[:space:]]*seeds *=.*/seeds = \"$SEEDS\"/}" \
+       -e "/^\[p2p\]/,/^\[/{s/^[[:space:]]*persistent_peers *=.*/persistent_peers = \"$PEERS\"/}" $HOME/.side/config/config.toml
+
 
     # 设置自定义端口
     sed -i.bak -e "s%:1317%:${SIDE_PORT}317%g;
@@ -104,6 +105,11 @@ function install_node() {
     sed -i -e "s/^pruning-keep-recent *=.*/pruning-keep-recent = \"100\"/" $HOME/.side/config/app.toml
     sed -i -e "s/^pruning-interval *=.*/pruning-interval = \"50\"/" $HOME/.side/config/app.toml
 
+    # set minimum gas price, enable prometheus and disable indexing
+    sed -i 's|minimum-gas-prices =.*|minimum-gas-prices = "0.005uside"|g' $HOME/.side/config/app.toml
+    sed -i -e "s/prometheus = false/prometheus = true/" $HOME/.side/config/config.toml
+    sed -i -e "s/^indexer *=.*/indexer = \"null\"/" $HOME/.side/config/config.toml
+
     # 创建服务文件
     sudo tee /etc/systemd/system/sided.service > /dev/null <<EOF
 [Unit]
@@ -121,12 +127,12 @@ WantedBy=multi-user.target
 EOF
 
     # 重置并下载快照
-    sided tendermint unsafe-reset-all --home $HOME/.side
-    if curl -s --head https://server-5.itrocket.net/testnet/side/side_2024-08-06_401474_snap.tar.lz4 | head -n 1 | grep "200" > /dev/null; then
-        curl https://server-5.itrocket.net/testnet/side/side_2024-08-06_401474_snap.tar.lz4 | lz4 -dc - | tar -xf - -C $HOME/.side
+   sided tendermint unsafe-reset-all --home $HOME/.side
+if curl -s --head curl https://server-5.itrocket.net/testnet/side/side_2024-08-06_402751_snap.tar.lz4 | head -n 1 | grep "200" > /dev/null; then
+  curl https://server-5.itrocket.net/testnet/side/side_2024-08-06_402751_snap.tar.lz4 | lz4 -dc - | tar -xf - -C $HOME/.side
     else
-        echo "没有找到快照"
-    fi
+  echo "no snapshot founded"
+fi
 
     # 启用并启动服务
     sudo systemctl daemon-reload
