@@ -252,5 +252,5 @@ function main_menu() {
     done
 }
 
-# 运行主菜单
+
 main_menu
